@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "AppSemaforo",
+    "name": "Semaforo 1 Sem 2024",
     "slug": "AppSemaforo",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,16 +12,27 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.douglas.camata.AppSemaforo"
     },
     "android": {
+      "versionCode": 3, 
+      "permissions": [
+        "INTERNET"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.douglas.camata.AppSemaforo"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5adad03b-4c90-4b54-a363-b410a842dca9"
+      }
     }
   }
 }

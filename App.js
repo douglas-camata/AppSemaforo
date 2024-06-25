@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TextInput, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
 import { Checkbox } from 'expo-checkbox'
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const App = () => {
   const [via1TempoVermelho, setVia1TempoVermelho] = useState('')
@@ -11,10 +12,12 @@ const App = () => {
   const [via2TempoVerde, setVia2TempoVerde] = useState('')
   const [iluminacao, setIluminacao] = useState(false)
   const [estacionamento, setEstacionamento] = useState(false)
+  const [enderecoWS, setEnderecoWS] = useState('')
+  const [inputEnderecoWS, setInputEnderecoWS] = useState('')
 
   const botaoSalvar = async () => {
     try {
-      let endpoint = 'http://192.168.0.107:5000//atualizarDados'
+      let endpoint = `${enderecoWS}/atualizarDados`
       const resposta = await fetch(endpoint,
         {
           method: 'PUT',
@@ -35,43 +38,60 @@ const App = () => {
         alert('Dados salvo com sucesso')
       }
     } catch (error) {
-      console.error('Erro ao salvar dados:', error)
+      console.error(endpoint, 'Erro ao salvar dados:', error)
+    }
+  }
+  const botaoSalvarConfig = async () => {
+    try {
+      await AsyncStorage.setItem('WS_Semaforo', JSON.stringify({
+        enderecoWS: inputEnderecoWS
+      }))
+      setEnderecoWS(inputEnderecoWS)
+      buscarDadosAPI()
+
+    } catch (error) {
+      console.error(endpoint, 'Erro ao salvar configuração:', error)
     }
   }
 
   const buscarDadosAPI = async () => {
     try {
-        const response = await fetch(`http://192.168.0.107:5000/obterDados`);
-        const dados = await response.json();
+      if (enderecoWS == '') return
 
-        console.log(dados);
-        
-        setVia1TempoVermelho(String(dados.tempo_vermelho_via_1))
-        setVia1AmareloPiscante(dados.amarelo_piscante_via_1)
-        setVia1TempoVerde(String(dados.tempo_verde_via_1))
-        setVia2TempoVermelho(String(dados.tempo_vermelho_via_2))
-        setVia2AmareloPiscante(dados.amarelo_piscante_via_2)
-        setVia2TempoVerde(String(dados.tempo_verde_via_2))
-        setIluminacao(dados.iluminacao_ligada)
-        setEstacionamento(dados.carro_estacionado)
-          
+      const response = await fetch(`${enderecoWS}/obterDados`);
+      const dados = await response.json();
+
+      setVia1TempoVermelho(String(dados.tempo_vermelho_via_1))
+      setVia1AmareloPiscante(dados.amarelo_piscante_via_1)
+      setVia1TempoVerde(String(dados.tempo_verde_via_1))
+      setVia2TempoVermelho(String(dados.tempo_vermelho_via_2))
+      setVia2AmareloPiscante(dados.amarelo_piscante_via_2)
+      setVia2TempoVerde(String(dados.tempo_verde_via_2))
+      setIluminacao(dados.iluminacao_ligada)
+      setEstacionamento(dados.carro_estacionado)
+
     } catch (error) {
-        console.error('Erro ao buscar dados:', error);
+      configuracoes()
+      console.error(enderecoWS, 'Erro ao buscar dados:', error);
     }
-}
+  }
+
+  const configuracoes = async () => {
+    let dados = await AsyncStorage.getItem('WS_Semaforo');
+    if (dados) {
+      dados = await JSON.parse(dados);
+      setEnderecoWS(dados.enderecoWS)
+      setInputEnderecoWS(dados.enderecoWS)
+    }
+  }
 
   useEffect(() => {
-
-    buscarDadosAPI()
-
-    const interval = setInterval(() => {
-      buscarDadosAPI();
-    }, 10000); // 10000 ms = 10 segundos
-
-    // Limpar o intervalo quando o componente desmonta
-    return () => clearInterval(interval);
-    
+    configuracoes()
   }, []);
+
+  useEffect(() => {
+    buscarDadosAPI()
+  }, [enderecoWS]);
 
   return (
     <ScrollView style={{ backgroundColor: '#007bff' }}>
@@ -117,14 +137,14 @@ const App = () => {
             <View style={{ flex: 1, paddingHorizontal: 10 }}>
               <Text>Tempo da cor vermelho</Text>
               <TextInput placeholder='Digite o tempo em segundos' keyboardType='numeric' style={styles.input}
-                value={via2TempoVermelho} onChangeText={setVia2TempoVermelho} />
+                value={via1TempoVerde} onChangeText={setVia1TempoVerde} />
               <View style={styles.checkbox}>
-                <Checkbox value={via2AmareloPiscante} onValueChange={setVia2AmareloPiscante} />
+                <Checkbox value={via1AmareloPiscante} onValueChange={setVia1AmareloPiscante} />
                 <Text>  Amarelo piscante</Text>
               </View>
               <Text>Tempo da cor verde</Text>
               <TextInput placeholder='Digite o tempo em segundos' keyboardType='numeric' style={styles.input}
-                value={via2TempoVerde} onChangeText={setVia2TempoVerde} />
+                value={via1TempoVermelho} onChangeText={setVia1TempoVermelho} />
             </View>
           </View>
 
@@ -136,14 +156,29 @@ const App = () => {
             </View>
           </View>
 
-          <Text style={styles.subtitulo}>Estacionamento</Text>
+          {/* <Text style={styles.subtitulo}>Estacionamento</Text>
           <View >
-            <Text style={{ textAlign: 'center', color: '#0f0', fontWeight: 'bold', fontSize: 20 }}>Vaga Livre</Text>
-          </View>
+            {!estacionamento ? 
+              <Text style={{ textAlign: 'center', color: '#0f0', fontWeight: 'bold', fontSize: 20 }}>Vaga Livre</Text> :
+              <Text style={{ textAlign: 'center', color: '#f00', fontWeight: 'bold', fontSize: 20 }}>Vaga Ocupada</Text>
+            }
+            
+          </View> */}
 
           <TouchableOpacity style={styles.botao} onPress={botaoSalvar}>
             <Text style={styles.textoBotao}> Salvar </Text>
           </TouchableOpacity>
+
+          <Text style={styles.subtitulo}>Configuração</Text>
+          <View >
+            <Text>Endereço do WS</Text>
+            <TextInput placeholder='Digite o endereço do WS que contém os dados' style={styles.input}
+              value={inputEnderecoWS} onChangeText={setInputEnderecoWS} />
+
+            <TouchableOpacity style={styles.botao} onPress={botaoSalvarConfig}>
+              <Text style={styles.textoBotao}> Salvar </Text>
+            </TouchableOpacity>
+          </View>
 
         </View>
       </View>
@@ -157,17 +192,11 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#007bff',
+    marginTop: 10,
     padding: 20,
     alignItems: 'center',
     borderBottomColor: '#a1a1a1',
-    borderBottomWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
+    borderBottomWidth: 0,
     elevation: 5
   },
   card: { flexDirection: 'row', borderBottomColor: '#007bff', borderBottomWidth: 2 },
@@ -176,6 +205,13 @@ const styles = StyleSheet.create({
   },
   conteudo: {
     backgroundColor: '#007bff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
   },
   corpo: {
     backgroundColor: '#fff',
